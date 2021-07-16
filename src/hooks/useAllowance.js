@@ -37,6 +37,10 @@ export function useGetAllowance() {
 }
 
 
+export function useAllowanceSuccess() {
+  return useSelector((state) => state.root.setWalletAllowanceSuccess)
+}
+
 export function useApprove(walletAddress, tokenAddress, spenderAddress) {
   const dispatch = useDispatch()
   const tokenContract = useTokenContract(tokenAddress, true)
@@ -48,7 +52,9 @@ export function useApprove(walletAddress, tokenAddress, spenderAddress) {
       dispatch(setWalletAllowancePending())
       tokenContract.functions.approve(spenderAddress, MaxUint256)
         .then((res) => {
-            dispatch(saveWalletAllowance(tokenAddress, MaxUint256))
+            res.wait().then(
+              dispatch(saveWalletAllowance(tokenAddress, MaxUint256))
+            )
           }
         ).catch((error) => {
         console.log(error)

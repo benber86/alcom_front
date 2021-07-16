@@ -2,7 +2,7 @@ import { getAddress } from '@ethersproject/address'
 import { AddressZero } from '@ethersproject/constants'
 import { Contract } from '@ethersproject/contracts'
 import {ethers} from "ethers";
-import {ALCX_DECIMALS} from "../constants";
+import {DECIMALS} from "../constants";
 
 export function isAddress(value) {
   try {

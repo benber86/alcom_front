@@ -3,7 +3,7 @@ import {SAVE_WALLET_BALANCE,
   SAVE_WALLET_ALLOWANCE,
   GET_WALLET_ALLOWANCE_ERROR,
   SET_WALLET_ALLOWANCE_ERROR,
-  SET_WALLET_ALLOWANCE_PENDING,
+  SET_WALLET_ALLOWANCE_PENDING
 } from "../constants/actionTypes";
 
 
@@ -46,6 +46,7 @@ export function setWalletAllowanceError(error) {
     error: error
   }
 }
+
 
 export function setWalletAllowancePending() {
   return {

@@ -1,5 +1,5 @@
 import {useDispatch, useSelector} from "react-redux";
-import {useSingleStakingVaultContract} from "./useContract";
+import {useVaultContract} from "./useContract";
 import {useCallback, useMemo} from "react";
 import {
   setStakingError,
@@ -13,11 +13,10 @@ import {
 } from "../actions/stakingActions";
 import {useGetCurrentBlockTimestamp} from './hooks'
 
-export function useStake(walletAddress, tokenAddress, vaultAddress, amount) {
+export function useStake(walletAddress, vaultAddress, amount) {
   const dispatch = useDispatch()
 
-  const vaultContract = useSingleStakingVaultContract(true)
-
+  const vaultContract = useVaultContract(vaultAddress, true)
   const stake = useCallback(async () => {
     dispatch(setStakingPending())
     if (!walletAddress) {
@@ -25,7 +24,8 @@ export function useStake(walletAddress, tokenAddress, vaultAddress, amount) {
     } else {
       vaultContract.functions.deposit(amount)
         .then((res) => {
-            dispatch(setStakingSuccess())
+            res.wait().then(
+              dispatch(setStakingSuccess()))
           }
         ).catch((error) => {
         console.log(error)
@@ -41,10 +41,10 @@ export function useStakingStatus() {
   return useSelector((state) => state.root.stakingStatus)
 }
 
-export function useUnstake(walletAddress, tokenAddress, vaultAddress, amount) {
+export function useUnstake(walletAddress, vaultAddress, amount) {
   const dispatch = useDispatch()
 
-  const vaultContract = useSingleStakingVaultContract(true)
+  const vaultContract = useVaultContract(vaultAddress, true)
 
 
   const unstake = useCallback(async () => {
@@ -54,7 +54,9 @@ export function useUnstake(walletAddress, tokenAddress, vaultAddress, amount) {
     } else {
       vaultContract.functions.withdraw(amount)
         .then((res) => {
-            dispatch(setUnstakingSuccess())
+            res.wait().then(
+              dispatch(setUnstakingSuccess())
+            )
           }
         ).catch((error) => {
         console.log(error)
@@ -73,7 +75,7 @@ export function useUnstakingStatus() {
 export function usePosition(walletAddress, vaultAddress) {
   const dispatch = useDispatch()
 
-  const vaultContract = useSingleStakingVaultContract(true)
+  const vaultContract = useVaultContract(vaultAddress, true)
   const timestamp = useGetCurrentBlockTimestamp()
   useMemo(async () => {
       if (!walletAddress) {

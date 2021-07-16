@@ -6,13 +6,14 @@ import {
 } from "../actions/walletActions";
 import {useDispatch, useSelector} from "react-redux";
 import {useGetCurrentBlockTimestamp} from './hooks'
+import {useWeb3React} from "@web3-react/core";
 
 
 export function useBalance(walletAddress, tokenAddress) {
   const dispatch = useDispatch()
+  const account = useWeb3React()
   const timestamp = useGetCurrentBlockTimestamp()
   const tokenContract = useTokenContract(tokenAddress, false)
-
   useMemo(async () => {
     if (!walletAddress) {
       dispatch(getWalletBalanceError("No account"))
@@ -25,7 +26,8 @@ export function useBalance(walletAddress, tokenAddress) {
         dispatch(getWalletBalanceError(error))
       })
     }
-  }, [walletAddress, tokenContract, tokenAddress, dispatch, timestamp])
+  }, [walletAddress, tokenContract, tokenAddress,
+    dispatch, account, timestamp])
 }
 
 export function useGetBalance() {

@@ -11,17 +11,25 @@ import {makeStyles} from "@material-ui/core/styles";
 import Tooltip from "@material-ui/core/Tooltip";
 import PropTypes from "prop-types";
 
+
 const useStyles = makeStyles((theme) => ({
   slider: {
     padding: 5
   }
 }));
 
-export default function SelectAmount({relevantToken, amount, setAmount, balance, setBalance}) {
+export default function SelectAmount({
+                                       relevantToken,
+                                       amount,
+                                       setAmount,
+                                       balance,
+                                       setBalance
+                                     }) {
 
   const classes = useStyles();
   const context = useWeb3React()
   const tokenBalances = useGetBalance()
+  const [lock, setLock] = useState(false)
   const [sliderValue, setSliderValue] = useState(0)
   const [displayedAmount, setDisplayedAmount] = useState(formatGwei(amount,2))
   const { account } = context
@@ -35,22 +43,35 @@ export default function SelectAmount({relevantToken, amount, setAmount, balance,
     }
   }, [tokenBalances, relevantToken, account, setBalance])
 
-  const handleInputChange = (event) => {
-    let targetValue = event.target.value.replace(/,/g, '.')
-    targetValue = targetValue.replace(/[^0-9.]/g, '');
-    if (targetValue === '') {
+  useEffect(() => {
+    if (lock) {
       return
     }
-    let newAmount = Number(targetValue);
-    let newGweiAmount = ethers.utils.parseEther(targetValue)
+    setDisplayedAmount(formatGwei(amount, 2))
+    const percentage = (balance > 0) ? amount.mul(100).div(balance) : BIG_ZERO
+    setSliderValue(percentage)
+  }, [amount, balance]);
+
+  const handleInputChange = (event) => {
+    setLock(true)
+    let targetValue = event.target.value.replace(/,/g, '.')
+    setDisplayedAmount(targetValue)
+  };
+  
+  const handleInputBlur = (event) => {
+    let targetValue = event.target.value
+    let newGweiAmount = BIG_ZERO
+    if (targetValue) {
+        targetValue = targetValue.replace(/,/g, '.')
+        targetValue = targetValue.replace(/[^0-9.]/g, '');
+        newGweiAmount = ethers.utils.parseEther(targetValue)
+      }
+
     if (newGweiAmount.gt(balance)) {
       newGweiAmount = balance
-      newAmount = formatGwei(balance, 2)
     }
-    const percentage = newGweiAmount.mul(100).div(balance)
     setAmount(newGweiAmount)
-    setDisplayedAmount(newAmount)
-    setSliderValue(percentage)
+    setLock(false)
   };
 
   const getBalanceHelperText = () => {
@@ -89,8 +110,9 @@ export default function SelectAmount({relevantToken, amount, setAmount, balance,
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <TextField
-          onChange={handleInputChange}
+          onBlur={handleInputBlur}
           value={displayedAmount}
+          onChange={handleInputChange}
           label="Amount"
           type="number"
           title="Enter the amount"
@@ -106,6 +128,7 @@ export default function SelectAmount({relevantToken, amount, setAmount, balance,
       <Grid item xs={12}>
         <div className={classes.slider}>
           <Slider
+            disabled={balance <= 0}
             value={sliderValue}
             ValueLabelComponent={ValueLabelComponent}
             onChange={handleSliderChange}

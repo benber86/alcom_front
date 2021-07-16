@@ -10,7 +10,14 @@ import InputLabel from '@material-ui/core/InputLabel';
 import React, {useState, useEffect} from 'react';
 import {useSelector} from "react-redux";
 import LoadingButton from '@material-ui/lab/LoadingButton';
-import {ALCX_TOKEN, BIG_ZERO, requestState, SS_VAULT} from "../../constants";
+import {
+  ALCX_TOKEN,
+  BIG_ZERO,
+  requestState,
+  SS_VAULT,
+  SLP_VAULT, 
+  SLP_TOKEN
+} from "../../constants";
 import {useBalance} from "../../hooks/useBalance";
 import {useWeb3React} from "@web3-react/core";
 import SelectAmount from "../SelectAmount"
@@ -23,12 +30,21 @@ import {
   useStakingStatus
 } from "../../hooks/useVault"
 import {
-  useAllowance,
+  useAllowance, useAllowanceSuccess,
   useApprove,
   useGetAllowance
 } from "../../hooks/useAllowance"
 import {formatGwei} from "../../utils";
 
+const SS_POOL = 1;
+const SLP_POOL = 2;
+const DEPOSIT = 0;
+const WITHDRAW = 1;
+
+const VAULT_MAP = {
+  [SS_POOL]: SS_VAULT,
+  [SLP_POOL]: SLP_VAULT
+}
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -62,20 +78,32 @@ export default function CompoundBox() {
   useAllowance(account, relevantToken, vault)
   usePosition(account, vault)
   const approvePending = useSelector((state) => state.root.setWalletAllowancePending)
-
-  const stake = useStake(account, relevantToken, vault, amount)
-  const unstake = useUnstake(account, relevantToken, vault, amount)
+  const allowanceRequestStatus = useAllowanceSuccess()
+  const stake = useStake(account, vault, amount)
+  const unstake = useUnstake(account, vault, amount)
   const stakingStatus = useStakingStatus()
   const unstakingStatus = useUnstakingStatus()
   const vaultPosition = useGetPosition()
+
   const handleTabChange = (event, newValue) => {
-    newValue === 0 ? setRelevantToken(ALCX_TOKEN) : setRelevantToken(SS_VAULT)
     setCurrentTab(newValue);
   };
 
-  const handlePoolChange = (event, newValue) => {
-    setPool(newValue);
+  const handlePoolChange = (event) => {
+    setPool(event.target.value);
+    setVault(VAULT_MAP[event.target.value])
   };
+
+  useEffect(() => {
+    switch (currentTab) {
+      case DEPOSIT:
+        pool === SS_POOL ? setRelevantToken(ALCX_TOKEN) : setRelevantToken(SLP_TOKEN);
+        break;
+      case WITHDRAW:
+        pool === SS_POOL ? setRelevantToken(SS_VAULT) : setRelevantToken(SLP_VAULT)
+    }
+    setAmount(BIG_ZERO);
+  }, [currentTab, pool])
 
   const approveTokenForVault = useApprove(account, relevantToken, vault)
 
@@ -84,10 +112,9 @@ export default function CompoundBox() {
   }
 
   useEffect(() => {
-    if (vaultPosition && vaultPosition[SS_VAULT]) {
-      setPosition(vaultPosition[SS_VAULT])
-    }
-    else {
+      if (vaultPosition && vaultPosition[VAULT_MAP[pool]]) {
+        setPosition(vaultPosition[VAULT_MAP[pool]])
+    } else {
       setPosition(BIG_ZERO)
     }
   }, [vaultPosition])
@@ -133,9 +160,8 @@ export default function CompoundBox() {
                           onChange={handlePoolChange}
                           label="Select pool"
                         >
-                          <MenuItem value={1}>ALCX Single Staking</MenuItem>
-                          <MenuItem value={2} disabled={true}>ALCX/ETH SLP
-                            (Soon™)</MenuItem>
+                          <MenuItem value={SS_POOL}>ALCX Single Staking</MenuItem>
+                          <MenuItem value={SLP_POOL}>ALCX/ETH SLP</MenuItem>
                         </Select>
                       </FormControl>
                     </Grid>
@@ -148,13 +174,13 @@ export default function CompoundBox() {
                   <Grid container spacing={3}>
                     <Grid item xs={4}>
                       <Typography variant="caption" color="primary">
-                        Staked: {formatGwei(position, 2)} ALCX
+                        Staked: {formatGwei(position, 2)} {pool === SS_POOL ? 'ALCX' : 'SLP'}
                       </Typography>
                     </Grid>
                     <Grid item xs={8}>
                       <div className={classes.button}>
                         {allowance.gte(amount) ? (
-                            (currentTab === 0) ? (
+                            (currentTab === DEPOSIT) ? (
                               <LoadingButton onClick={stake}
                                              loading={stakingStatus === requestState.PENDING}
                                              disabled={amount.eq(0)}
@@ -171,7 +197,7 @@ export default function CompoundBox() {
                           )
                           :
                           (
-                            <LoadingButton loading={approvePending}
+                            <LoadingButton loading={approvePending || allowanceRequestStatus}
                                            variant="contained" color="primary"
                                            onClick={onApprove}>
                               Approve
